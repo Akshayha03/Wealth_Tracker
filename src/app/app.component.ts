@@ -9,6 +9,7 @@ import { BudgetCardsComponent } from './components/budget-cards/budget-cards.com
 import { QuickActionModalComponent } from './components/quick-action-modal/quick-action-modal.component';
 import { BottomNavComponent } from './components/bottom-nav/bottom-nav.component';
 import { LandingPageComponent } from './components/landing-page/landing-page.component';
+import { SmartInsightsComponent } from './components/smart-insights/smart-insights.component';
 import { FinanceService } from './services/finance.service';
 
 @Component({
@@ -19,6 +20,7 @@ import { FinanceService } from './services/finance.service';
     SidebarComponent,
     HeaderComponent,
     HeroCardsComponent,
+    SmartInsightsComponent,
     InteractiveAnalyticsComponent,
     ExpenseTimelineComponent,
     BudgetCardsComponent,
