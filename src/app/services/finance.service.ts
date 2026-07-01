@@ -38,6 +38,15 @@ export interface Budget {
 
 export type Timeframe = 'Daily' | 'Weekly' | 'Monthly' | 'Quarterly' | 'Half-Yr' | 'Yearly';
 
+export interface SmartInsight {
+  id: string;
+  type: 'savings' | 'investment' | 'alert' | 'recommendation';
+  category: string;
+  impact: string;
+  title: string;
+  description: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -354,6 +363,64 @@ export class FinanceService {
   // Search & Filters
   searchQuery = signal<string>('');
   selectedFilter = signal<'ALL' | 'expense' | 'income' | 'investment'>('ALL');
+
+  // Smart Insights State & Logic
+  activeInsightIndex = signal<number>(0);
+
+  insights = computed<SmartInsight[]>(() => {
+    const inc = this.totalIncome();
+    const exp = this.totalExpenses();
+    const net = this.netBalance();
+    
+    return [
+      {
+        id: 'ins_1',
+        type: 'savings',
+        category: 'Cash Flow Optimization',
+        impact: 'High (94%)',
+        title: exp < inc * 0.5 ? 'Excellent Savings Rate Detected' : 'Optimize Monthly Cash Flow',
+        description: exp < inc * 0.5
+          ? `Your current spending leaves a healthy ₹ ${(inc - exp).toLocaleString('en-IN')} surplus. Consider moving 50% into a liquid index fund.`
+          : `Your expenses account for ${inc > 0 ? Math.round((exp / inc) * 100) : 0}% of your verified income. Review non-essential lifestyle spending.`
+      },
+      {
+        id: 'ins_2',
+        type: 'investment',
+        category: 'Tax Harvesting',
+        impact: 'Medium (88%)',
+        title: 'Automate Tax Harvesting & Section 80C',
+        description: 'Ensure your ELSS, PPF, and term insurance allocations maximize your ₹ 1.5L limit before financial quarter end.'
+      },
+      {
+        id: 'ins_3',
+        type: 'recommendation',
+        category: 'Subscription Stack',
+        impact: 'High (91%)',
+        title: 'Audit Recurring Subscriptions',
+        description: 'Consolidating overlapping streaming and digital subscriptions can yield an estimated ₹ 840/month in recurring savings.'
+      }
+    ];
+  });
+
+  activeInsight = computed(() => {
+    const list = this.insights();
+    if (!list || list.length === 0) return null;
+    return list[this.activeInsightIndex() % list.length];
+  });
+
+  nextInsight() {
+    const len = this.insights().length;
+    if (len > 0) {
+      this.activeInsightIndex.update(idx => (idx + 1) % len);
+    }
+  }
+
+  prevInsight() {
+    const len = this.insights().length;
+    if (len > 0) {
+      this.activeInsightIndex.update(idx => (idx - 1 + len) % len);
+    }
+  }
 
   // Modal Control
   isModalOpen = signal<boolean>(false);
