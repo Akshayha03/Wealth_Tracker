@@ -1,7 +1,8 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, effect, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FinanceService } from '../../services/finance.service';
+import { AuthService } from '../../services/auth.service';
 import { IconComponent } from '../icon/icon.component';
 
 @Component({
@@ -49,7 +50,7 @@ import { IconComponent } from '../icon/icon.component';
         <!-- The Track Button -->
         <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
           <button 
-            (click)="showTrackModal = true"
+            (click)="onTrackClick()"
             class="w-full sm:w-auto px-8 py-5 rounded-3xl bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-500 hover:opacity-95 text-white font-black text-lg tracking-wide shadow-[0_0_40px_rgba(168,85,247,0.5)] hover:scale-105 active:scale-95 transition-all duration-300 flex items-center justify-center gap-3 group">
             <span>Track My Wealth</span>
             <app-icon name="arrow-right" [size]="22" class="group-hover:translate-x-1 transition-transform"></app-icon>
@@ -154,17 +155,51 @@ import { IconComponent } from '../icon/icon.component';
 })
 export class LandingPageComponent {
   finance = inject(FinanceService);
+  auth = inject(AuthService);
 
   showTrackModal = false;
   userName = '';
-  userIncome: number | null = 75000;
+  userIncome: number | null = null;
   selectedAvatar = this.finance.availableAvatars[0].url;
 
-  onLaunch() {
-    this.finance.completeOnboarding(
+  constructor() {
+    effect(() => {
+      const user = this.auth.currentUser();
+      const profile = this.auth.currentProfile();
+      if (user && !this.finance.isOnboarded()) {
+        untracked(() => {
+          this.showTrackModal = true;
+          if (!this.userName) {
+            this.userName = profile?.full_name || user.user_metadata?.full_name || '';
+          }
+        });
+      } else if (!user) {
+        untracked(() => {
+          this.showTrackModal = false;
+        });
+      }
+    });
+  }
+
+  onTrackClick() {
+    if (!this.auth.currentUser()) {
+      this.auth.showAuthPortal.set(true);
+    } else {
+      this.showTrackModal = true;
+    }
+  }
+
+  async onLaunch() {
+    const enteredIncome = Number(this.userIncome);
+    const user = this.auth.currentUser();
+    const userId = user?.id || user?.email || 'default';
+    await this.finance.completeOnboarding(
       this.userName || 'Explorer',
-      this.userIncome || 75000,
-      this.selectedAvatar
+      enteredIncome > 0 ? enteredIncome : 75000,
+      this.selectedAvatar,
+      userId
     );
+    this.showTrackModal = false;
+    await this.auth.logoutToLogin('Ledger initialized! Please login to access your dashboard.');
   }
 }

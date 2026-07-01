@@ -5,13 +5,24 @@
   <div class="aurora-blob aurora-3"></div>
 </div>
 
-<!-- Onboarding Landing View -->
-<ng-container *ngIf="!finance.isOnboarded()">
+<!-- Global Toast Notifications -->
+<app-toast></app-toast>
+
+<!-- 1. Authentication Portal (Active when unauthenticated AND user clicked Track My Wealth) -->
+<ng-container *ngIf="!auth.currentUser() && auth.showAuthPortal()">
+  <app-login *ngIf="auth.authView() === 'login'"></app-login>
+  <app-signup *ngIf="auth.authView() === 'signup'"></app-signup>
+  <app-forgot-password *ngIf="auth.authView() === 'forgot'"></app-forgot-password>
+</ng-container>
+
+<!-- 2. Landing / Onboarding View (Active on start before Track clicked, OR right after login before profile setup) -->
+<ng-container *ngIf="(!auth.currentUser() && !auth.showAuthPortal()) || (auth.currentUser() && !finance.isOnboarded())">
   <app-landing-page></app-landing-page>
 </ng-container>
 
-<!-- Main Application Layout Container (Active after Onboarding) -->
-<div *ngIf="finance.isOnboarded()" class="app-layout flex min-h-screen">
+<!-- 3. Main Application Dashboard Workspace Area (Active after login & profile onboarding) -->
+<ng-container *ngIf="auth.currentUser() && finance.isOnboarded()">
+  <div class="app-layout flex min-h-screen">
   
   <!-- Collapsible Sidebar (Desktop) -->
   <app-sidebar></app-sidebar>
@@ -26,7 +37,7 @@
     <ng-container [ngSwitch]="finance.activeNav()">
 
       <!-- Dashboard View (Centerpiece) -->
-      <div *ngSwitchCase="'Dashboard'" class="space-y-8 animate-fade-in">
+      <div *ngSwitchCase="'Dashboard'" class="flex flex-col gap-8 animate-fade-in">
         <!-- Hero Cards Section -->
         <app-hero-cards></app-hero-cards>
 
@@ -41,17 +52,17 @@
       </div>
 
       <!-- Transactions Dedicated View -->
-      <div *ngSwitchCase="'Transactions'" class="animate-fade-in space-y-6">
+      <div *ngSwitchCase="'Transactions'" class="flex flex-col gap-6 animate-fade-in">
         <app-expense-timeline></app-expense-timeline>
       </div>
 
       <!-- Budgets Dedicated View -->
-      <div *ngSwitchCase="'Budgets'" class="animate-fade-in space-y-6">
+      <div *ngSwitchCase="'Budgets'" class="flex flex-col gap-6 animate-fade-in">
         <app-budget-cards></app-budget-cards>
       </div>
 
       <!-- Analytics Dedicated View -->
-      <div *ngSwitchCase="'Analytics'" class="animate-fade-in space-y-8">
+      <div *ngSwitchCase="'Analytics'" class="flex flex-col gap-8 animate-fade-in">
         <app-interactive-analytics></app-interactive-analytics>
       </div>
 
@@ -110,7 +121,7 @@
       </div>
 
       <!-- Default Fallback View -->
-      <div *ngSwitchDefault class="space-y-8 animate-fade-in">
+      <div *ngSwitchDefault class="flex flex-col gap-8 animate-fade-in">
         <app-hero-cards></app-hero-cards>
         <app-interactive-analytics></app-interactive-analytics>
         <app-budget-cards></app-budget-cards>
@@ -127,3 +138,4 @@
 
 <!-- Responsive Mobile Bottom Navigation -->
 <app-bottom-nav *ngIf="finance.isOnboarded()"></app-bottom-nav>
+</ng-container>

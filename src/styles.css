@@ -212,3 +212,27 @@ img, svg {
 .gap-4 { gap: 1rem; }
 .gap-6 { gap: 1.5rem; }
 
+/* Ensure Angular host elements behave as block/flex containers so vertical gap & spacing work reliably */
+app-root,
+app-sidebar,
+app-header,
+app-hero-cards,
+app-smart-insights,
+app-interactive-analytics,
+app-budget-cards,
+app-expense-timeline,
+app-quick-action-modal,
+app-bottom-nav,
+app-landing-page,
+app-login,
+app-signup,
+app-forgot-password,
+app-toast {
+  display: block;
+}
+
+app-icon {
+  display: inline-flex;
+}
+
+

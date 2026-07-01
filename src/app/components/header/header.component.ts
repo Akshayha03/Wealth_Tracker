@@ -2,6 +2,7 @@ import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FinanceService } from '../../services/finance.service';
+import { AuthService } from '../../services/auth.service';
 import { IconComponent } from '../icon/icon.component';
 
 @Component({
@@ -54,6 +55,14 @@ import { IconComponent } from '../icon/icon.component';
           <span class="absolute top-2 right-2 size-2 rounded-full bg-pink-500 ring-4 ring-black/50 animate-pulse"></span>
         </button>
 
+        <!-- Logout Button -->
+        <button 
+          (click)="auth.logout()"
+          title="Sign Out"
+          class="p-2.5 rounded-2xl bg-white/5 hover:bg-red-500/20 border border-white/10 hover:border-red-500/40 text-slate-300 hover:text-red-400 transition-all flex items-center justify-center">
+          <app-icon name="log-out" [size]="18"></app-icon>
+        </button>
+
         <!-- Profile Avatar Pill -->
         <div class="flex items-center gap-2 pl-1 cursor-pointer group" (click)="finance.setNav('Settings')" title="View Settings">
           <div class="w-10 h-10 rounded-2xl p-0.5 bg-gradient-to-tr from-purple-500 to-cyan-400 shadow-md flex items-center justify-center overflow-hidden shrink-0 group-hover:scale-105 transition-transform">
@@ -72,9 +81,11 @@ import { IconComponent } from '../icon/icon.component';
 })
 export class HeaderComponent {
   finance = inject(FinanceService);
+  auth = inject(AuthService);
   searchQuery = '';
 
   onSearchChange(val: string) {
     this.finance.searchQuery.set(val);
   }
 }
+

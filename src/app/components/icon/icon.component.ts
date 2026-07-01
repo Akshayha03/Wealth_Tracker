@@ -213,6 +213,43 @@ import { CommonModule } from '@angular/common';
         <path *ngSwitchCase="'arrow-right'" d="M5 12h14" />
         <path *ngSwitchCase="'arrow-right'" d="m12 5 7 7-7 7" />
 
+        <!-- eye -->
+        <path *ngSwitchCase="'eye'" d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+        <circle *ngSwitchCase="'eye'" cx="12" cy="12" r="3" />
+
+        <!-- eye-off -->
+        <path *ngSwitchCase="'eye-off'" d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
+        <path *ngSwitchCase="'eye-off'" d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
+        <path *ngSwitchCase="'eye-off'" d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
+        <line *ngSwitchCase="'eye-off'" x1="2" x2="22" y1="2" y2="22" />
+
+        <!-- lock -->
+        <rect *ngSwitchCase="'lock'" width="18" height="11" x="3" y="11" rx="2" ry="2" />
+        <path *ngSwitchCase="'lock'" d="M7 11V7a5 5 0 0 1 10 0v4" />
+
+        <!-- mail -->
+        <rect *ngSwitchCase="'mail'" width="20" height="16" x="2" y="4" rx="2" />
+        <path *ngSwitchCase="'mail'" d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+
+        <!-- user -->
+        <path *ngSwitchCase="'user'" d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+        <circle *ngSwitchCase="'user'" cx="12" cy="7" r="4" />
+
+        <!-- loader -->
+        <path *ngSwitchCase="'loader'" d="M12 2v4" />
+        <path *ngSwitchCase="'loader'" d="m16.2 7.8 2.9-2.9" />
+        <path *ngSwitchCase="'loader'" d="M18 12h4" />
+        <path *ngSwitchCase="'loader'" d="m16.2 16.2 2.9 2.9" />
+        <path *ngSwitchCase="'loader'" d="M12 18v4" />
+        <path *ngSwitchCase="'loader'" d="m4.9 19.1 2.9-2.9" />
+        <path *ngSwitchCase="'loader'" d="M2 12h4" />
+        <path *ngSwitchCase="'loader'" d="m4.9 4.9 2.9 2.9" />
+
+        <!-- log-out -->
+        <path *ngSwitchCase="'log-out'" d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+        <polyline *ngSwitchCase="'log-out'" points="16 17 21 12 16 7" />
+        <line *ngSwitchCase="'log-out'" x1="21" x2="9" y1="12" y2="12" />
+
         <!-- fallback -->
         <circle *ngSwitchDefault cx="12" cy="12" r="8" />
       </ng-container>
