@@ -1,4 +1,5 @@
 import { Injectable, signal, computed } from '@angular/core';
+import { supabase } from '../../supabase';
 
 export type NavItem = 'Dashboard' | 'Transactions' | 'Budgets' | 'Analytics' | 'Investments' | 'Goals' | 'Settings';
 
@@ -80,15 +81,70 @@ export class FinanceService {
   // User Onboarding State
   userProfile = signal<UserProfile | null>(null);
   isOnboarded = signal<boolean>(false);
+  currentUserId = '';
 
   constructor() {
     this.loadFromStorage();
   }
 
   loadFromStorage() {
-    const saved = localStorage.getItem('nexusfi_user_profile');
-    const savedTx = localStorage.getItem('nexusfi_user_transactions');
-    const savedBg = localStorage.getItem('nexusfi_user_budgets');
+    // Only load if currentUserId is set, or don't auto-load global into wrong accounts
+  }
+
+  async syncFromDatabase() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: incomeData } = await supabase.from('income').select('*').eq('user_id', user.id);
+      const { data: expenseData } = await supabase.from('expenses').select('*').eq('user_id', user.id);
+
+      const txList: Transaction[] = [];
+      if (incomeData && incomeData.length > 0) {
+        incomeData.forEach((inc: any) => {
+          txList.push({
+            id: inc.id,
+            title: inc.source || 'Income',
+            merchant: 'Deposit',
+            amount: Number(inc.amount),
+            type: 'income',
+            category: 'Salary & Income',
+            date: inc.income_date || 'Today',
+            paymentMethod: 'Transfer',
+            icon: 'inbox',
+            color: '#10b981'
+          });
+        });
+      }
+      if (expenseData && expenseData.length > 0) {
+        expenseData.forEach((exp: any) => {
+          txList.push({
+            id: exp.id,
+            title: exp.description || exp.category || 'Expense',
+            merchant: exp.description || 'Merchant',
+            amount: -Math.abs(Number(exp.amount)),
+            type: 'expense',
+            category: exp.category || 'General',
+            date: exp.expense_date || 'Today',
+            paymentMethod: 'Card',
+            icon: 'credit-card',
+            color: '#f43f5e'
+          });
+        });
+      }
+      if (txList.length > 0) {
+        this.transactions.set(txList);
+        this.saveState();
+      }
+    } catch (e) {
+      console.error('Error syncing database records:', e);
+    }
+  }
+
+  loadUserSession(userId: string, defaultName?: string) {
+    this.currentUserId = userId;
+    const saved = localStorage.getItem(`nexusfi_user_profile_${userId}`);
+    const savedTx = localStorage.getItem(`nexusfi_user_transactions_${userId}`);
+    const savedBg = localStorage.getItem(`nexusfi_user_budgets_${userId}`);
 
     if (saved) {
       try {
@@ -96,29 +152,96 @@ export class FinanceService {
         this.userProfile.set(profile);
         this.isOnboarded.set(true);
       } catch (e) {
-        console.error('Failed to load profile', e);
+        console.error('Failed to load user profile', e);
       }
+    } else {
+      const profile: UserProfile = {
+        name: defaultName || 'Manager',
+        income: 75000,
+        avatarUrl: this.availableAvatars[0].url
+      };
+      this.userProfile.set(profile);
+      this.isOnboarded.set(true);
+      localStorage.setItem(`nexusfi_user_profile_${userId}`, JSON.stringify(profile));
     }
 
     if (savedTx) {
       try {
         let txList: Transaction[] = JSON.parse(savedTx);
-        // Clean out legacy static pre-added expenses
         txList = txList.filter(t => t.id !== 'tx_init_2' && t.id !== 'tx_init_3' && !t.title?.includes('Swiggy') && !t.title?.includes('Uber'));
         this.transactions.set(txList);
       } catch (e) {}
+    } else {
+      const inc = this.userProfile()?.income || 75000;
+      this.transactions.set([
+        {
+          id: `tx_init_${userId}_1`,
+          title: 'Monthly Verified Income',
+          merchant: 'Salary Deposit',
+          amount: inc,
+          type: 'income',
+          category: 'Salary & Income',
+          date: 'Today, 09:00 AM',
+          paymentMethod: 'NEFT / UPI',
+          icon: 'inbox',
+          color: '#10b981',
+          tag: 'Verified'
+        }
+      ]);
     }
 
     if (savedBg) {
       try {
         let bgList: Budget[] = JSON.parse(savedBg);
-        bgList = bgList.map(b => (b.spent === 640 || b.spent === 320) ? { ...b, spent: 0 } : b);
         this.budgets.set(bgList);
       } catch (e) {}
+    } else {
+      const inc = this.userProfile()?.income || 75000;
+      this.budgets.set([
+        {
+          id: `bg_${userId}_1`,
+          name: 'Food & Dining',
+          category: 'Food & Dining',
+          limit: Math.round(inc * 0.25),
+          allocated: Math.round(inc * 0.25),
+          spent: 0,
+          icon: 'credit-card',
+          color: '#f43f5e',
+          health: 'Optimal'
+        },
+        {
+          id: `bg_${userId}_2`,
+          name: 'Shopping & Lifestyle',
+          category: 'Shopping',
+          limit: Math.round(inc * 0.15),
+          allocated: Math.round(inc * 0.15),
+          spent: 0,
+          icon: 'bag',
+          color: '#a855f7',
+          health: 'Optimal'
+        },
+        {
+          id: `bg_${userId}_3`,
+          name: 'Transportation & Travel',
+          category: 'Transportation',
+          limit: Math.round(inc * 0.10),
+          allocated: Math.round(inc * 0.10),
+          spent: 0,
+          icon: 'layers',
+          color: '#38bdf8',
+          health: 'Optimal'
+        }
+      ]);
     }
+
+    this.saveState();
+    this.syncFromDatabase();
   }
 
-  completeOnboarding(name: string, income: number, avatarUrl: string) {
+  async completeOnboarding(name: string, income: number, avatarUrl: string, userId?: string): Promise<void> {
+    if (userId) {
+      this.currentUserId = userId;
+    }
     const profile: UserProfile = {
       name: name || 'Explorer',
       income: income || 75000,
@@ -127,12 +250,32 @@ export class FinanceService {
 
     this.userProfile.set(profile);
     this.isOnboarded.set(true);
-    localStorage.setItem('nexusfi_user_profile', JSON.stringify(profile));
+    const keySuffix = this.currentUserId ? `_${this.currentUserId}` : '';
+    localStorage.setItem(`nexusfi_user_profile${keySuffix}`, JSON.stringify(profile));
 
-    // Initialize only with user-provided verified income details (zero pre-added expenses)
+    // Insert income record into relational income table in Supabase immediately and await it
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { error } = await supabase.from('income').insert([{
+          user_id: user.id,
+          amount: profile.income,
+          source: 'Monthly Verified Income',
+          income_date: new Date().toISOString().split('T')[0]
+        }]);
+        if (error) {
+          console.error('Failed inserting onboarding income:', error);
+        } else {
+          await this.syncFromDatabase();
+        }
+      }
+    } catch (e) {
+      console.error('Error in onboarding Supabase sync:', e);
+    }
+
     const startingTransactions: Transaction[] = [
       {
-        id: 'tx_init_1',
+        id: `tx_init_${this.currentUserId || '1'}_1`,
         title: 'Monthly Verified Income',
         merchant: 'Salary Deposit',
         amount: profile.income,
@@ -148,7 +291,7 @@ export class FinanceService {
 
     const startingBudgets: Budget[] = [
       {
-        id: 'bg_1',
+        id: `bg_${this.currentUserId || '1'}_1`,
         name: 'Food & Dining',
         category: 'Food & Dining',
         limit: Math.round(profile.income * 0.25),
@@ -159,7 +302,7 @@ export class FinanceService {
         health: 'Optimal'
       },
       {
-        id: 'bg_2',
+        id: `bg_${this.currentUserId || '1'}_2`,
         name: 'Shopping & Lifestyle',
         category: 'Shopping',
         limit: Math.round(profile.income * 0.15),
@@ -170,7 +313,7 @@ export class FinanceService {
         health: 'Optimal'
       },
       {
-        id: 'bg_3',
+        id: `bg_${this.currentUserId || '1'}_3`,
         name: 'Transportation & Travel',
         category: 'Transportation',
         limit: Math.round(profile.income * 0.10),
@@ -188,16 +331,21 @@ export class FinanceService {
   }
 
   resetOnboarding() {
-    localStorage.removeItem('nexusfi_user_profile');
-    localStorage.removeItem('nexusfi_user_transactions');
-    localStorage.removeItem('nexusfi_user_budgets');
+    const keySuffix = this.currentUserId ? `_${this.currentUserId}` : '';
+    localStorage.removeItem(`nexusfi_user_profile${keySuffix}`);
+    localStorage.removeItem(`nexusfi_user_transactions${keySuffix}`);
+    localStorage.removeItem(`nexusfi_user_budgets${keySuffix}`);
     this.userProfile.set(null);
     this.isOnboarded.set(false);
   }
 
   saveState() {
-    localStorage.setItem('nexusfi_user_transactions', JSON.stringify(this.transactions()));
-    localStorage.setItem('nexusfi_user_budgets', JSON.stringify(this.budgets()));
+    const keySuffix = this.currentUserId ? `_${this.currentUserId}` : '';
+    localStorage.setItem(`nexusfi_user_transactions${keySuffix}`, JSON.stringify(this.transactions()));
+    localStorage.setItem(`nexusfi_user_budgets${keySuffix}`, JSON.stringify(this.budgets()));
+    if (this.userProfile()) {
+      localStorage.setItem(`nexusfi_user_profile${keySuffix}`, JSON.stringify(this.userProfile()));
+    }
   }
 
   // Navigation & Sidebar
@@ -390,7 +538,6 @@ export class FinanceService {
     };
     this.transactions.update(prev => [newTx, ...prev]);
 
-    // Also update budgets spent if it's an expense
     if (newTx.amount < 0 && newTx.category) {
       this.budgets.update(prev => prev.map(b => {
         if (b.category === newTx.category || b.name === newTx.category) {
@@ -401,11 +548,49 @@ export class FinanceService {
     }
 
     this.saveState();
+
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        if (newTx.amount > 0) {
+          supabase.from('income').insert([{
+            user_id: user.id,
+            amount: newTx.amount,
+            source: newTx.title || newTx.merchant || 'Income',
+            income_date: new Date().toISOString().split('T')[0]
+          }]).then(({ error }) => {
+            if (error) console.error('Error inserting income transaction:', error);
+          });
+        } else {
+          supabase.from('expenses').insert([{
+            user_id: user.id,
+            amount: Math.abs(newTx.amount),
+            category: newTx.category || 'General',
+            description: newTx.title || newTx.merchant || '',
+            expense_date: new Date().toISOString().split('T')[0]
+          }]).then(({ error }) => {
+            if (error) console.error('Error inserting expense transaction:', error);
+          });
+        }
+      }
+    }).catch(e => console.error('User fetch error in addTransaction:', e));
   }
 
   deleteTransaction(id: string) {
+    const targetTx = this.transactions().find(t => t.id === id);
     this.transactions.update(prev => prev.filter(t => t.id !== id));
     this.saveState();
+
+    if (targetTx) {
+      supabase.auth.getUser().then(({ data: { user } }) => {
+        if (user) {
+          if (targetTx.amount > 0) {
+            supabase.from('income').delete().eq('id', id).eq('user_id', user.id).then(() => {});
+          } else {
+            supabase.from('expenses').delete().eq('id', id).eq('user_id', user.id).then(() => {});
+          }
+        }
+      }).catch(() => {});
+    }
   }
 
   downloadReport() {
